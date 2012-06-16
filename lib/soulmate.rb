@@ -58,7 +58,8 @@ module Soulmate
   
   def normalize(str)
     # str.downcase.gsub(/[^a-z0-9 ]/i, '').strip
-    
+    return nil unless str
+
     str = str.downcase.strip
 
     accents = {
