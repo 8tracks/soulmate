@@ -28,5 +28,44 @@ module Soulmate
         []
       end
     end
+    
+    
+    def paginated_matches_for_term(term, options = {})
+      options = { :page => 1, :per_page => 5, :cache => true }.merge(options)
+      
+      words = normalize(term).split(' ').reject do |w|
+        w.size < MIN_COMPLETE or Soulmate.stop_words.include?(w)
+      end.sort
+
+      return [] if words.empty?
+
+      cachekey = "#{cachebase}:" + words.join('|')
+
+      if !options[:cache] || !Soulmate.redis.exists(cachekey)
+        interkeys = words.map { |w| "#{base}:#{w}" }
+        Soulmate.redis.zinterstore(cachekey, interkeys)
+        Soulmate.redis.expire(cachekey, 10 * 60) # expire after 10 minutes
+      end
+
+      WillPaginate::Collection.create(
+        options[:page],
+        options[:per_page]
+      ) do |pager|
+        start = ((pager.current_page - 1) * pager.per_page)
+        stop  = start + pager.per_page - 1
+        
+        ids = Soulmate.redis.zrevrange(cachekey, start, stop)
+        if ids.size > 0
+          results = Soulmate.redis.hmget(database, *ids)
+          results = results.reject{ |r| r.nil? } # handle cached results for ids which have since been deleted
+          
+          pager.replace(results.map { |r| MultiJson.decode(r) })
+          pager.total_entries = Soulmate.redis.zcard(cachekey)
+        else
+          pager.replace([])
+          pager.total_entries = 0
+        end
+      end
+    end
   end
 end
