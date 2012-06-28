@@ -37,7 +37,14 @@ module Soulmate
         w.size < MIN_COMPLETE or Soulmate.stop_words.include?(w)
       end.sort
 
-      return [] if words.empty?
+      if words.empty?
+        return WillPaginate::Collection.create(
+          options[:page],
+          options[:per_page]
+        ) do |pager|
+        pager.replace([])
+        pager.total_entries = 0
+      end       
 
       cachekey = "#{cachebase}:" + words.join('|')
 
