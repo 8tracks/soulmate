@@ -51,7 +51,7 @@ module Soulmate
 
 
   def get_words(phrase)
-    normalize(phrase).split(' ').reject do |w|
+    normalize(phrase).split(/[\s+]+/).reject do |w|
       Soulmate.stop_words.include?(w)
     end
   end
