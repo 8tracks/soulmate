@@ -47,13 +47,16 @@ module Soulmate
         Soulmate.redis.expire(cachekey, 10 * 60) # expire after 10 minutes
       end
 
+      total_entries = Soulmate.redis.zcard(cachekey)
       ids = Soulmate.redis.zrevrange(cachekey, start, stop)
 
-      results = Soulmate.redis.hmget(database, *ids)
-      results = results.reject{ |r| r.nil? } # handle cached results for ids which have since been deleted
+      collection = []
 
-      collection = results.map { |r| MultiJson.decode(r) }
-      total_entries = Soulmate.redis.zcard(cachekey)
+      unless ids.empty?
+        results = Soulmate.redis.hmget(database, *ids)
+        results = results.reject{ |r| r.nil? } # handle cached results for ids which have since been deleted
+        collection = results.map { |r| MultiJson.decode(r) }
+      end
 
       OpenStruct.new(:collection => collection, :total_entries => total_entries)
     end
