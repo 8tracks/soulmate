@@ -38,6 +38,10 @@ module Soulmate
       words = normalize(term).split(' ').reject do |w|
         w.size < MIN_COMPLETE or Soulmate.stop_words.include?(w)
       end.sort
+      
+      if words.empty?  
+         return OpenStruct.new(:collection => [], :total_entries => 0) 
+      end
 
       cachekey = "#{cachebase}:" + words.join('|')
 
